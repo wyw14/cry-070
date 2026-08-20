@@ -1,6 +1,7 @@
 package service
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -32,12 +33,12 @@ func (p RedactionPolicy) Normalize() RedactionPolicy {
 func (p RedactionPolicy) Applies(field string) bool {
 	normalized := p.Normalize()
 	for _, candidate := range normalized.Preserve {
-		if candidate == field {
+		if equalsField(candidate, field, normalized.CaseSensitive) {
 			return false
 		}
 	}
 	for _, candidate := range normalized.Fields {
-		if candidate == field {
+		if equalsField(candidate, field, normalized.CaseSensitive) {
 			return true
 		}
 	}
@@ -46,8 +47,20 @@ func (p RedactionPolicy) Applies(field string) bool {
 func (p RedactionPolicy) Apply(input string) string {
 	normalized := p.Normalize()
 	for _, field := range normalized.Fields {
-		if strings.Contains(input, field) {
-			return strings.ReplaceAll(input, field, normalized.Replacement)
+		if normalized.CaseSensitive {
+			if strings.Contains(input, field) {
+				return strings.ReplaceAll(input, field, normalized.Replacement)
+			}
+		} else {
+			// Case-insensitive: build a (?i) pattern so every casing variant of
+			// the field is redacted while non-matching text is preserved verbatim.
+			pattern, err := regexp.Compile("(?i)" + regexp.QuoteMeta(field))
+			if err != nil {
+				continue
+			}
+			if pattern.MatchString(input) {
+				return pattern.ReplaceAllString(input, normalized.Replacement)
+			}
 		}
 	}
 	return input
@@ -68,12 +81,36 @@ func (p RedactionPolicy) ReplacementFor(field string) string {
 	return ""
 }
 func (p RedactionPolicy) ContainsSensitive(input string) bool {
-	for _, field := range p.Normalize().Fields {
-		if strings.Contains(input, field) {
+	normalized := p.Normalize()
+	for _, field := range normalized.Fields {
+		if matchField(field, input, normalized.CaseSensitive) {
 			return true
 		}
 	}
 	return false
+}
+// matchField reports whether needle occurs as a substring of haystack,
+// honoring the case-sensitivity flag. It treats an empty needle as "no match"
+// so that a blank entry never redacts everything. Use this for free-text
+// content (audit log messages, summaries), not for exact field-name lookup.
+func matchField(needle, haystack string, caseSensitive bool) bool {
+	if needle == "" {
+		return false
+	}
+	if caseSensitive {
+		return strings.Contains(haystack, needle)
+	}
+	return strings.Contains(strings.ToLower(haystack), strings.ToLower(needle))
+}
+
+// equalsField reports whether a and b are the same field name, honoring the
+// case-sensitivity flag. Unlike matchField this is exact (no substring match),
+// so a field named "ssn" does not match a key called "session_id".
+func equalsField(a, b string, caseSensitive bool) bool {
+	if caseSensitive {
+		return a == b
+	}
+	return strings.EqualFold(a, b)
 }
 func (p RedactionPolicy) ApplyFields(values map[string]string) map[string]string {
 	out := map[string]string{}

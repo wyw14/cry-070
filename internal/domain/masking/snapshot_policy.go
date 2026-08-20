@@ -12,9 +12,19 @@ type SnapshotBundle struct {
 
 func (b SnapshotBundle) Clone() SnapshotBundle {
 	copyBundle := b
-	copyBundle.Fallbacks = append([]Snapshot(nil), b.Fallbacks...)
-	copyBundle.Labels = b.Labels
-	copyBundle.Order = b.Order
+	copyBundle.Primary = b.Primary.Clone()
+	copyBundle.Fallbacks = make([]Snapshot, len(b.Fallbacks))
+	for index := range b.Fallbacks {
+		copyBundle.Fallbacks[index] = b.Fallbacks[index].Clone()
+	}
+	if b.Labels != nil {
+		labels := make(map[string]string, len(b.Labels))
+		for key, value := range b.Labels {
+			labels[key] = value
+		}
+		copyBundle.Labels = labels
+	}
+	copyBundle.Order = append([]string(nil), b.Order...)
 	return copyBundle
 }
 

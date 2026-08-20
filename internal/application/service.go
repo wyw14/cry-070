@@ -190,19 +190,30 @@ func (s *Services) StartBatch(ctx context.Context, pipeline, preview, owner, tar
 	return b, nil
 }
 func (s *Services) RunBatch(ctx context.Context, id, snapshot string, chunk int) (masking.Batch, error) {
+	// Honor cancellation before mutating state so a cancelled request stops
+	// promptly and returns the cancellation error instead of writing progress.
+	if err := ctx.Err(); err != nil {
+		return masking.Batch{}, err
+	}
 	b, err := s.Store.GetBatch(ctx, id)
 	if err != nil {
 		return b, err
 	}
-	if err = b.Start(snapshot, s.Clock.Now()); err != nil {
+	plan, err := NewBatchRunPlan(id, snapshot, chunk, s.Clock.Now())
+	if err != nil {
+		return b, err
+	}
+	if err = b.Start(plan.Snapshot, plan.StartedAt); err != nil {
 		return b, err
 	}
 	if err = s.Store.UpdateBatch(ctx, b); err != nil {
 		return b, err
 	}
-	if err = b.Advance(chunk, s.Clock.Now()); err != nil {
+	if err = b.Advance(plan.Chunk, s.Clock.Now()); err != nil {
 		return b, err
 	}
+	// Propagate cancellation from the final progress write instead of
+	// discarding it; otherwise a cancelled run reports success.
 	if err = s.Store.UpdateBatch(ctx, b); err != nil {
 		return b, err
 	}

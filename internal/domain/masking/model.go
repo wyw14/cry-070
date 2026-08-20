@@ -355,8 +355,12 @@ func (b *Batch) Fail(reason string, now time.Time) {
 	b.FinishedAt = now.UTC()
 	b.Version++
 }
+// Cancel transitions a batch to the cancelled state. Only batches that are
+// still in flight (planned or running) may be cancelled; a succeeded batch is
+// terminal and must not be cancellable. This mirrors the guard in
+// CancellationPolicy.CanCancel so the domain and the API-facing policy agree.
 func (b *Batch) Cancel(now time.Time) error {
-	if b.State != BatchRunning && b.State != BatchPlanned && b.State != BatchSucceeded {
+	if b.State != BatchRunning && b.State != BatchPlanned {
 		return ErrState
 	}
 	b.State = BatchCancelled

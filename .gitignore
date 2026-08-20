@@ -1,0 +1,8 @@
+.env
+var/
+dist/
+node_modules/
+.gocache/
+.gomodcache/
+.codex/
+.claude/

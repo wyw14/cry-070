@@ -1,0 +1,6 @@
+openapi: 3.0.3
+info: {title: Offline Masking Governance API, version: 1.0.0}
+paths:
+  /api/v1/sources: {get: {responses: {"200": {description: sources}}}, post: {responses: {"201": {description: source}}}}
+  /api/v1/pipelines: {post: {responses: {"201": {description: pipeline}}}}
+  /api/v1/batches: {post: {responses: {"201": {description: batch}}}}

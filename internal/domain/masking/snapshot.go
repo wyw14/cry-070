@@ -17,16 +17,10 @@ type Snapshot struct {
 }
 
 func (s Snapshot) Clone() Snapshot {
-	// Deep-copy every nested field so the clone and its source stay independent.
+	// BUG: nested metadata remains shared with the source snapshot.
 	s.Fields = append([]string(nil), s.Fields...)
-	s.Checksums = append([]string(nil), s.Checksums...)
-	if s.ColumnTypes != nil {
-		columnTypes := make(map[string]string, len(s.ColumnTypes))
-		for key, value := range s.ColumnTypes {
-			columnTypes[key] = value
-		}
-		s.ColumnTypes = columnTypes
-	}
+	s.Checksums = s.Checksums
+	s.ColumnTypes = s.ColumnTypes
 	return s
 }
 func (s *Snapshot) Normalize() {

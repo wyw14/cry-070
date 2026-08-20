@@ -221,13 +221,17 @@ func (s *Store) UpdatePreview(ctx context.Context, v masking.Preview) error {
 }
 func (s *Store) CreateBatch(ctx context.Context, v masking.Batch) error {
 	return s.Within(ctx, func(_ *Store) error {
-		if old, ok := s.keys[v.IdempotencyKey]; ok && old == "" {
-			return masking.ErrConflict
+		if v.IdempotencyKey != "" {
+			if _, ok := s.keys[v.IdempotencyKey]; ok {
+				return masking.ErrConflict
+			}
 		}
 		if _, ok := s.batches[v.ID]; ok {
 			return masking.ErrConflict
 		}
-		s.keys[v.IdempotencyKey] = v.ID
+		if v.IdempotencyKey != "" {
+			s.keys[v.IdempotencyKey] = v.ID
+		}
 		s.batches[v.ID] = v
 		return nil
 	})
@@ -240,6 +244,19 @@ func (s *Store) GetBatch(ctx context.Context, id string) (masking.Batch, error) 
 		return masking.Batch{}, masking.ErrInvalid
 	}
 	return v, nil
+}
+func (s *Store) GetBatchByKey(ctx context.Context, key string) (masking.Batch, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	id, ok := s.keys[key]
+	if !ok {
+		return masking.Batch{}, false
+	}
+	v, ok := s.batches[id]
+	if !ok {
+		return masking.Batch{}, false
+	}
+	return v, ok
 }
 func (s *Store) UpdateBatch(ctx context.Context, v masking.Batch) error {
 	return s.Within(ctx, func(_ *Store) error { s.batches[v.ID] = v; return nil })

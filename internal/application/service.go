@@ -178,6 +178,11 @@ func (s *Services) StartBatch(ctx context.Context, pipeline, preview, owner, tar
 	if v.State != masking.PreviewConfirmed {
 		return masking.Batch{}, masking.ErrState
 	}
+	if key != "" {
+		if existing, ok := s.Store.GetBatchByKey(ctx, key); ok {
+			return existing, nil
+		}
+	}
 	b, err := masking.NewBatch(s.IDs.New("batch"), pipeline, preview, owner, target, key, total, s.Clock.Now())
 	if err != nil {
 		return b, err

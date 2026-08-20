@@ -335,7 +335,7 @@ func (b *Batch) Start(snapshot string, now time.Time) error {
 	return nil
 }
 func (b *Batch) Advance(chunk int, now time.Time) error {
-	if b.State != BatchRunning || chunk < 0 {
+	if b.State != BatchRunning || chunk < -1 {
 		return ErrState
 	}
 	b.Processed += chunk

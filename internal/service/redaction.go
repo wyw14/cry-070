@@ -28,13 +28,8 @@ func (r *Redactor) Map(input map[string]string) map[string]string {
 	return out
 }
 func (r *Redactor) Text(input string) string {
-	// Fields are stored lowercased (see NewRedactor), so compare against the
-	// lowercased input to catch sensitive tokens regardless of casing. This
-	// prevents variants like "TOKEN" from leaking when only "token" is
-	// configured. Non-sensitive input is returned unchanged.
-	lower := strings.ToLower(input)
 	for f := range r.Fields {
-		if strings.Contains(lower, f) {
+		if strings.Contains(input, f) {
 			return "[redacted]"
 		}
 	}

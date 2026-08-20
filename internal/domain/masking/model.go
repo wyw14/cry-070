@@ -334,11 +334,11 @@ func (b *Batch) Start(snapshot string, now time.Time) error {
 	b.StartedAt = now.UTC()
 	return nil
 }
-func (b *Batch) Advance(count int, now time.Time) error {
-	if b.State != BatchRunning || count < 0 {
+func (b *Batch) Advance(chunk int, now time.Time) error {
+	if b.State != BatchRunning || chunk < 0 {
 		return ErrState
 	}
-	b.Processed += count
+	b.Processed += chunk
 	if b.Processed > b.Total {
 		b.Processed = b.Total
 	}

@@ -142,11 +142,7 @@ func (s *Services) Preview(ctx context.Context, pipeline, source string, rows in
 	}
 	fields := s.Store.ListFields(ctx, source)
 	rules := s.Store.ListRules(ctx)
-	for _, f := range fields {
-		if f.Sensitivity == masking.Restricted && len(f.AccessScope) == 0 {
-			v.Conflicts = append(v.Conflicts, "restricted field without scope: "+f.Name)
-		}
-	}
+	v.Conflicts = append(v.Conflicts, restrictedPreviewConflicts(fields)...)
 	if len(rules) == 0 {
 		v.Conflicts = append(v.Conflicts, "pipeline has no active rule")
 	}

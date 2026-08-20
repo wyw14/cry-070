@@ -16,7 +16,13 @@ type ExecutionReport struct {
 	Metrics           map[string]int
 }
 
-func (r ExecutionReport) Success() bool { return r.Failed == 0 }
+// Success reports the batch as successful only when it has genuinely reached
+// the succeeded terminal state and no failures were recorded. A still-running
+// or otherwise incomplete batch (Failed == 0 but State != BatchSucceeded) must
+// not be advertised as successful, since its counters are not yet final.
+func (r ExecutionReport) Success() bool {
+	return r.State == BatchSucceeded && r.Failed == 0
+}
 func (r *ExecutionReport) AddWarning(value string) {
 	if value != "" {
 		r.Warnings = append(r.Warnings, value)
